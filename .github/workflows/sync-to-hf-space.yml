@@ -1,0 +1,34 @@
+name: Sync to Hugging Face Space
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Push backend to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          git config --global user.email "action@github.com"
+          git config --global user.name "GitHub Action"
+
+          mkdir -p /tmp/hf-space
+          cp Dockerfile /tmp/hf-space/
+          cp README.md /tmp/hf-space/
+          cp -r backend /tmp/hf-space/
+
+          cd /tmp/hf-space
+          git init -b main
+          git add .
+          git commit -m "Deploy ${{ github.sha }}"
+          git remote add hf-space https://Benithatuze:$HF_TOKEN@huggingface.co/spaces/Benithatuze/eleza-backend
+          git push hf-space main --force

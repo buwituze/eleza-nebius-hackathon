@@ -1,0 +1,15 @@
+# Build outputs
+build/
+.dart_tool/
+
+# Platform-specific native code (not needed for web build)
+android/
+ios/
+macos/
+windows/
+linux/
+
+# Dev tooling
+test/
+.git/
+*.md

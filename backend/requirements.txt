@@ -1,0 +1,22 @@
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+python-multipart>=0.0.9
+google-genai>=0.8.0
+transformers>=4.41.0
+accelerate>=0.30.0
+torch>=2.3.0
+librosa>=0.10.0
+soundfile>=0.12.0
+langdetect>=1.0.9
+pydantic[email]>=2.7.0
+python-dotenv>=1.0.0
+psutil>=5.9.0
+psycopg2-binary>=2.9.9
+passlib[bcrypt]>=1.7.4
+pyjwt>=2.8.0
+gunicorn>=21.0.0
+twilio>=9.0.0
+
+# Note: Only WAV audio format is supported.
+# Frontend apps should record/convert audio to WAV format (16kHz mono recommended).
+# See AUDIO_FORMAT.md for details.

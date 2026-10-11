@@ -1,0 +1,187 @@
+workflows:
+
+  # ─────────────────────────────────────────────────────────────
+  # Web – deploy to hosting (open in iPhone Safari)
+  # ─────────────────────────────────────────────────────────────
+  web-release:
+    name: Web Release
+    max_build_duration: 30
+    instance_type: mac_mini_m2
+
+    environment:
+      flutter: stable
+      groups:
+        - goup-name
+
+    cache:
+      cache_paths:
+        - $FLUTTER_ROOT/.pub-cache
+
+    scripts:
+      - name: Write .env file
+        script: |
+          echo "ELEVENLABS_API_KEY=$ELEVENLABS_API_KEY" > frontend/.env
+          echo "API_BASE_URL=$API_BASE_URL" >> frontend/.env
+
+      - name: Get Flutter packages
+        script: cd frontend && flutter pub get
+
+      - name: Build web
+        script: cd frontend && flutter build web --release
+
+    artifacts:
+      - frontend/build/web/**
+
+    publishing:
+      email:
+        recipients:
+          - b.rutagengw@alustudent.com
+        notify:
+          success: true
+          failure: true
+
+
+  # ─────────────────────────────────────────────────────────────
+  # Android – secondary build (APK + AAB for Play Store)
+  # ─────────────────────────────────────────────────────────────
+  android-release:
+    name: Android Release
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    environment:
+      flutter: stable
+      # Add in Codemagic app settings → Environment variables:
+      #   CM_KEYSTORE (base64), CM_KEYSTORE_PASSWORD, CM_KEY_ALIAS, CM_KEY_PASSWORD
+      #   ELEVENLABS_API_KEY, API_BASE_URL
+      vars:
+        PACKAGE_NAME: "com.example.frontend"
+
+    cache:
+      cache_paths:
+        - $FLUTTER_ROOT/.pub-cache
+        - $HOME/.gradle/caches
+
+    scripts:
+      - name: Set up keystore
+        script: |
+          echo $CM_KEYSTORE | base64 --decode > /tmp/keystore.jks
+          cat > frontend/android/key.properties <<EOF
+          storePassword=$CM_KEYSTORE_PASSWORD
+          keyPassword=$CM_KEY_PASSWORD
+          keyAlias=$CM_KEY_ALIAS
+          storeFile=/tmp/keystore.jks
+          EOF
+
+      - name: Write .env file
+        script: |
+          cat > frontend/.env <<EOF
+          ELEVENLABS_API_KEY=$ELEVENLABS_API_KEY
+          API_BASE_URL=$API_BASE_URL
+          EOF
+
+      - name: Get Flutter packages
+        script: cd frontend && flutter pub get
+
+      - name: Flutter analyze
+        script: cd frontend && flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Flutter test
+        script: cd frontend && flutter test
+
+      - name: Build Android APK (sideload / direct install)
+        script: cd frontend && flutter build apk --release
+
+      - name: Build Android App Bundle (Play Store)
+        script: cd frontend && flutter build appbundle --release
+
+    artifacts:
+      - frontend/build/app/outputs/flutter-apk/app-release.apk
+      - frontend/build/app/outputs/bundle/release/app-release.aab
+      - frontend/build/app/outputs/**/mapping.txt
+
+    publishing:
+      email:
+        recipients:
+          - b.rutagengw@alustudent.com
+        notify:
+          success: true
+          failure: true
+
+
+  # ─────────────────────────────────────────────────────────────
+  # iOS – build when Apple Developer account is ready
+  # ─────────────────────────────────────────────────────────────
+  ios-release:
+    name: iOS Release (iPhone 15)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      # Add in Codemagic app settings → Environment variables:
+      #   APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_KEY_IDENTIFIER,
+      #   APP_STORE_CONNECT_PRIVATE_KEY, CERTIFICATE_PRIVATE_KEY
+      #   ELEVENLABS_API_KEY, API_BASE_URL
+      vars:
+        BUNDLE_ID: "com.example.frontend"
+
+    cache:
+      cache_paths:
+        - $FLUTTER_ROOT/.pub-cache
+        - $HOME/Library/Caches/CocoaPods
+
+    scripts:
+      - name: Set up code signing
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files \
+            "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles
+
+      - name: Write .env file
+        script: |
+          cat > frontend/.env <<EOF
+          ELEVENLABS_API_KEY=$ELEVENLABS_API_KEY
+          API_BASE_URL=$API_BASE_URL
+          EOF
+
+      - name: Get Flutter packages
+        script: cd frontend && flutter pub get
+
+      - name: Flutter analyze
+        script: cd frontend && flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Flutter test
+        script: cd frontend && flutter test
+
+      - name: Build iOS .ipa
+        script: |
+          cd frontend
+          flutter build ipa \
+            --release \
+            --export-options-plist=/Users/builder/export_options.plist
+
+    artifacts:
+      - frontend/build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      email:
+        recipients:
+          - b.rutagengw@alustudent.com
+        notify:
+          success: true
+          failure: true
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true
+        beta_groups:
+          - "Internal Testers"
