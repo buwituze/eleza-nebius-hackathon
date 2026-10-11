@@ -1,14 +1,6 @@
----
-title: Eleza Pre-Consultation Backend
-emoji: 🏥
-colorFrom: green
-colorTo: blue
-sdk: docker
-app_port: 7860
-pinned: false
----
+# Eleza Pre-Consultation Backend
 
-# Pre-Consultation Agent
+## Pre-Consultation Agent
 
 For component specific details, see:
 
@@ -127,13 +119,12 @@ Patient speaks into kiosk
 
 ### Deployment Overview
 
-| Component       | Platform                        | Notes                                                                                                                                                     |
-| --------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Backend API     | **HuggingFace Spaces** (Docker) | Port 7860. Config in root `Dockerfile`. First boot downloads ~6 GB of Whisper models.                                                                     |
-| Backend tunnel  | **ngrok**                       | The current deployed URL is an ngrok tunnel. This URL can change — if it does, update it in `frontend/lib/services/api_service.dart` (hardcoded for web). |
-| Database        | **Render PostgreSQL**           | Managed database. Connection details set via environment variables on HuggingFace Spaces.                                                                 |
-| Frontend builds | **Codemagic CI/CD**             | Builds APK, web, and iOS artifacts. Config in `codemagic.yaml`.                                                                                           |
-| Frontend APK    | **Google Drive**                | Downloadable APK for Android testing.                                                                                                                     |
+| Component       | Platform              | Notes                                                                                                                                                     |
+| --------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Backend tunnel  | **ngrok**             | The current deployed URL is an ngrok tunnel. This URL can change — if it does, update it in `frontend/lib/services/api_service.dart` (hardcoded for web). |
+| Database        | **Render PostgreSQL** | Managed database. Connection details set via backend environment variables.                                                                               |
+| Frontend builds | **Codemagic CI/CD**   | Builds APK, web, and iOS artifacts. Config in `codemagic.yaml`.                                                                                           |
+| Frontend APK    | **Google Drive**      | Downloadable APK for Android testing.                                                                                                                     |
 
 ## Quick Setup (Backend + Frontend)
 
@@ -448,7 +439,6 @@ psql -U postgres pre_consultation_db < backup.sql
 ```
 pre-consultation-agent/
 ├── README.md                  # This file
-├── Dockerfile                 # HuggingFace Spaces deployment
 ├── codemagic.yaml             # CI/CD for Flutter builds
 │
 ├── backend/

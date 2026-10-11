@@ -20,7 +20,6 @@ class ApiService {
   static String get baseUrl {
     if (kIsWeb) {
       return 'https://boisterously-implicatory-anderson.ngrok-free.dev'; // ngrok (local dev)
-      // return 'https://benithatuze-eleza-backend.hf.space'; // HuggingFace Space
     }
 
     final envUrl =
