@@ -2,11 +2,8 @@
 models/model_c.py — Next-question selection wrapper.
 """
 
-import os, re
-from google import genai
-from .gemini_utils import generate_with_fallback
-
-_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+import re
+from .nebius_client import generate, MODEL_C
 
 COVERAGE_CHECKLIST = [
     "severity or intensity of the main symptom",
@@ -100,21 +97,13 @@ Understood. One question only.
 {prompt}"""
     
     try:
-        response = generate_with_fallback(
-            _client,
-            contents=full_prompt,
-            config={
-                'temperature': 0.2,
-                'max_output_tokens': 100,
-                'thinking_config': {'thinking_budget': 0},
-            }
-        )
-        question = re.sub(r"^(question|q)[:\-]?\s*", "", response.text.strip(), flags=re.IGNORECASE)
+        response_text = generate(MODEL_C, full_prompt, temperature=0.2, max_tokens=100)
+        question = re.sub(r"^(question|q)[:\-]?\s*", "", response_text, flags=re.IGNORECASE)
         if question and not question.endswith("?"):
             question += "?"
         return question
     except Exception as e:
-        print(f"Warning: All Gemini models failed in model_c: {e}. Using fallback question.")
+        print(f"Warning: All Nemotron models failed in model_c: {e}. Using fallback question.")
         lang = extraction.get("language", "kinyarwanda")
         if lang == "kinyarwanda":
             return "Mbwira byinshi ku bibazo byawe?"

@@ -9,20 +9,7 @@ NEW SYSTEM (March 2026):
 
 import os, json, re
 from typing import Optional, List, Dict
-from google import genai
-from .gemini_utils import generate_with_fallback
-
-# Lazy-initialized Gemini client — avoids crashing at import time if key is missing
-_client = None
-
-def _get_client():
-    global _client
-    if _client is None:
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            raise RuntimeError("GEMINI_API_KEY environment variable is not set.")
-        _client = genai.Client(api_key=api_key)
-    return _client
+from .nebius_client import generate, MODEL_B
 
 # ============================================================================
 # SCHEMAS
@@ -104,7 +91,7 @@ Choose the DOMINANT language and output only that."""
 def _cleanup_mixed_language(text: str, target_language: str = "kinyarwanda") -> str:
     """
     Clean up mixed language text to pure Kinyarwanda or English.
-    Uses Gemini to normalize casual mixed speech.
+    Uses Nemotron to normalize casual mixed speech.
     """
     if len(text.strip()) < 10:
         return text
@@ -118,16 +105,7 @@ Target language: {target_language}
 Output (pure {target_language} only):"""
     
     try:
-        response = generate_with_fallback(
-            _get_client(),
-            contents=prompt,
-            config={
-                'temperature': 0.0,
-                'max_output_tokens': 200,
-                'thinking_config': {'thinking_budget': 0},
-            }
-        )
-        return response.text.strip()
+        return generate(MODEL_B, prompt, temperature=0.0, max_tokens=200)
     except Exception as e:
         print(f"Warning: Language cleanup failed: {e}. Using original text.")
         return text
@@ -202,18 +180,9 @@ Patient statement:
 Extract routing information as JSON:"""
     
     try:
-        response = generate_with_fallback(
-            _get_client(),
-            contents=prompt,
-            config={
-                'temperature': 0.0,
-                'max_output_tokens': 150,
-                'response_mime_type': 'application/json',
-                'thinking_config': {'thinking_budget': 0},
-            }
-        )
-        
-        result = _parse_json(response.text)
+        response_text = generate(MODEL_B, prompt, temperature=0.0, max_tokens=150, json_mode=True)
+
+        result = _parse_json(response_text)
         
         # Validate schema
         extraction = {
@@ -329,18 +298,9 @@ Patient conversation:
 Extract all clinical information as JSON:"""
     
     try:
-        response = generate_with_fallback(
-            _get_client(),
-            contents=prompt,
-            config={
-                'temperature': 0.0,
-                'max_output_tokens': 400,
-                'response_mime_type': 'application/json',
-                'thinking_config': {'thinking_budget': 0},
-            }
-        )
-        
-        result = _parse_json(response.text)
+        response_text = generate(MODEL_B, prompt, temperature=0.0, max_tokens=400, json_mode=True)
+
+        result = _parse_json(response_text)
         extraction = _validate_full(result)
         
         # Double-check red flags with keyword detection
@@ -366,7 +326,7 @@ Extract all clinical information as JSON:"""
 # ============================================================================
 
 def _parse_json(raw: str) -> dict:
-    """Parse JSON from Gemini response, handling markdown formatting."""
+    """Parse JSON from model response, handling markdown formatting."""
     cleaned = raw.strip()
     # Remove markdown code blocks if present
     cleaned = re.sub(r"```(?:json)?\s*", "", cleaned).rstrip("`")

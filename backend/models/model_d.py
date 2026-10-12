@@ -2,12 +2,9 @@
 models/model_d.py — Risk and priority scoring wrapper.
 """
 
-import os, json, re
+import json, re
 from typing import Optional
-from google import genai
-from .gemini_utils import generate_with_fallback
-
-_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+from .nebius_client import generate, MODEL_D
 
 PRIORITY_LEVELS = ["HIGH", "MEDIUM", "LOW"]
 
@@ -42,7 +39,7 @@ Rules:
 
 
 def _parse(raw: str) -> dict:
-    # Since we use response_mime_type='application/json', response is already JSON
+    # JSON mode is requested, but strip markdown fences defensively
     cleaned = raw.strip()
     # Remove markdown code blocks if present
     cleaned = re.sub(r"```(?:json)?\s*", "", cleaned).rstrip("`")
@@ -129,17 +126,8 @@ Understood. JSON risk score only.
 {prompt}"""
     
     try:
-        response = generate_with_fallback(
-            _client,
-            contents=full_prompt,
-            config={
-                'temperature': 0.0,
-                'max_output_tokens': 300,
-                'response_mime_type': 'application/json',
-                'thinking_config': {'thinking_budget': 0},
-            }
-        )
-        return _parse(response.text)
+        response_text = generate(MODEL_D, full_prompt, temperature=0.0, max_tokens=300, json_mode=True)
+        return _parse(response_text)
     except Exception:
         return {"priority": "MEDIUM", "suspected_issue": "unclear or unclassifiable complaint",
                 "risk_factors": [], "confidence": 0.0}

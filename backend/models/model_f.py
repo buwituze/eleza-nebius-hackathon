@@ -2,12 +2,9 @@
 models/model_f.py — Doctor summary generator wrapper.
 """
 
-import os, json, re, datetime
+import json, re, datetime
 from typing import Optional
-from google import genai
-from .gemini_utils import generate_with_fallback
-
-_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+from .nebius_client import generate, MODEL_F
 
 _SYSTEM = """You are a clinical documentation assistant. Write a patient brief for a doctor.
 Rules:
@@ -18,7 +15,7 @@ Rules:
 
 
 def _parse(raw: str) -> dict:
-    # Since we use response_mime_type='application/json', response is already JSON
+    # JSON mode is requested, but strip markdown fences defensively
     cleaned = raw.strip()
     # Remove markdown code blocks if present
     cleaned = re.sub(r"```(?:json)?\s*", "", cleaned).rstrip("`")
@@ -85,19 +82,10 @@ Understood. JSON brief only, no diagnosis.
 {prompt}"""
 
     try:
-        response = generate_with_fallback(
-            _client,
-            contents=full_prompt,
-            config={
-                'temperature': 0.1,
-                'max_output_tokens': 600,
-                'response_mime_type': 'application/json',
-                'thinking_config': {'thinking_budget': 0},
-            }
-        )
-        gemini_out = _parse(response.text)
+        response_text = generate(MODEL_F, full_prompt, temperature=0.1, max_tokens=600, json_mode=True)
+        llm_out = _parse(response_text)
     except Exception:
-        gemini_out = {
+        llm_out = {
             "narrative_summary": f"Patient reported {extraction.get('chief_complaint') or 'unspecified complaint'}. Duration: {extraction.get('duration') or 'unknown'}. Severity: {extraction.get('severity') or 'unknown'}.",
             "key_findings":      score.get("risk_factors") or [extraction.get("chief_complaint", "")],
             "red_flag_note":     "Red flag confirmed by system." if extraction.get("red_flags_present") else "",
@@ -117,10 +105,10 @@ Understood. JSON brief only, no diagnosis.
         "suspected_issue":     score.get("suspected_issue", "not determined"),
         "confidence_score":    score.get("confidence", 0.0),
         "risk_factors":        score.get("risk_factors") or [],
-        # Gemini-generated fields
-        "narrative_summary":   gemini_out.get("narrative_summary", ""),
-        "key_findings":        gemini_out.get("key_findings", []),
-        "red_flag_note":       gemini_out.get("red_flag_note", ""),
+        # Nemotron-generated fields
+        "narrative_summary":   llm_out.get("narrative_summary", ""),
+        "key_findings":        llm_out.get("key_findings", []),
+        "red_flag_note":       llm_out.get("red_flag_note", ""),
         "conversation_log":    [{"question": q, "answer": a} for q, a in zip(questions_asked, patient_answers)],
         "raw_transcript":      transcript,
         "language":            language,

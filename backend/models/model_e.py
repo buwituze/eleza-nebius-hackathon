@@ -2,12 +2,8 @@
 models/model_e.py — Patient-facing guidance message generator.
 """
 
-import os
 from typing import Optional
-from google import genai
-from .gemini_utils import generate_with_fallback
-
-_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+from .nebius_client import generate, MODEL_E
 
 _FALLBACK = {
     "english": {
@@ -100,16 +96,7 @@ Understood. Patient message only, no diagnosis.
 Now generate for:
 {prompt}"""
         
-        response = generate_with_fallback(
-            _client,
-            contents=full_prompt,
-            config={
-                'temperature': 0.3,
-                'max_output_tokens': 200,
-                'thinking_config': {'thinking_budget': 0},
-            }
-        )
-        message  = response.text.strip()
+        message = generate(MODEL_E, full_prompt, temperature=0.3, max_tokens=200)
     except Exception:
         return templates.get(priority, templates["UNKNOWN"])
 

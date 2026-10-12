@@ -10,10 +10,7 @@ import json
 import os
 import re
 from typing import Optional
-from google import genai
-
-
-_gemini_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY")) if os.getenv("GEMINI_API_KEY") else None
+from models.nebius_client import generate, is_configured, MODEL_LIGHTNING
 
 
 @dataclass
@@ -132,10 +129,10 @@ def suggest_unclear_issue_routing(
     language: str,
 ) -> Optional[dict]:
     """
-    For unclear issue labels, ask Gemini for a best-fit department and issue label.
+    For unclear issue labels, ask Nemotron for a best-fit department and issue label.
     Returns None when suggestion is unavailable.
     """
-    if _gemini_client is None:
+    if not is_configured():
         return None
 
     conversation = "\n".join(
@@ -169,17 +166,8 @@ Output schema:
 }}"""
 
     try:
-        response = _gemini_client.models.generate_content(
-            model="gemini-3.1-flash-lite-preview",
-            contents=prompt,
-            config={
-                "temperature": 0.0,
-                "max_output_tokens": 250,
-                "response_mime_type": "application/json",
-                "thinking_config": {"thinking_budget": 0},
-            },
-        )
-        parsed = _parse_json_payload(response.text)
+        response_text = generate(MODEL_LIGHTNING, prompt, temperature=0.0, max_tokens=250, json_mode=True)
+        parsed = _parse_json_payload(response_text)
     except Exception:
         return None
 
