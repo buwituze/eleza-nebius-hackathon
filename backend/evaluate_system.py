@@ -4,7 +4,7 @@ evaluate_system.py — Standalone system accuracy evaluator.
 Connects directly to the database, pulls completed sessions and their
 conversation turns, then scores the system on:
 
-  1. Question Relevance   (Gemini-as-judge, 1-5 per turn)
+  1. Question Relevance   (Nemotron-as-judge, 1-5 per turn)
   2. Information Gain     (did each turn surface new clinical info?)
   3. Coverage Rate        (% of key clinical fields filled)
   4. Turn Efficiency      (how many turns to reach coverage)
@@ -25,8 +25,7 @@ load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from google import genai
-from models.gemini_utils import generate_with_fallback
+from models.nebius_client import generate, MODEL_SUPER
 
 # ============================================================================
 # DB CONNECTION
@@ -41,19 +40,6 @@ def _connect():
         password=os.getenv("DB_PASSWORD", ""),
         cursor_factory=RealDictCursor,
     )
-
-
-# ============================================================================
-# GEMINI CLIENT
-# ============================================================================
-
-_client = None
-
-def _get_client():
-    global _client
-    if _client is None:
-        _client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-    return _client
 
 
 # ============================================================================
@@ -148,7 +134,7 @@ def load_prediction(conn, session_id):
 
 
 # ============================================================================
-# METRIC 1: QUESTION RELEVANCE (Gemini-as-judge)
+# METRIC 1: QUESTION RELEVANCE (Nemotron-as-judge)
 # ============================================================================
 
 def evaluate_relevance(chief_complaint, turns):
@@ -181,13 +167,7 @@ Respond ONLY with valid JSON — an array of objects, one per turn:
 No markdown, no explanation outside the JSON."""
 
     try:
-        response = generate_with_fallback(
-            _get_client(),
-            contents=prompt,
-            config={"temperature": 0.1, "max_output_tokens": 1000,
-                     "thinking_config": {"thinking_budget": 0}},
-        )
-        text = response.text.strip()
+        text = generate(MODEL_SUPER, prompt, temperature=0.1, max_tokens=1000)
         text = re.sub(r'^```(?:json)?\s*', '', text)
         text = re.sub(r'\s*```$', '', text)
         return json.loads(text)
@@ -197,7 +177,7 @@ No markdown, no explanation outside the JSON."""
 
 
 # ============================================================================
-# METRIC 2: INFORMATION GAIN (Gemini checks per-turn field coverage)
+# METRIC 2: INFORMATION GAIN (Nemotron checks per-turn field coverage)
 # ============================================================================
 
 KEY_FIELDS = [
@@ -230,13 +210,7 @@ Respond ONLY with valid JSON:
 No markdown, no explanation outside the JSON."""
 
     try:
-        response = generate_with_fallback(
-            _get_client(),
-            contents=prompt,
-            config={"temperature": 0.1, "max_output_tokens": 800,
-                     "thinking_config": {"thinking_budget": 0}},
-        )
-        text = response.text.strip()
+        text = generate(MODEL_SUPER, prompt, temperature=0.1, max_tokens=800)
         text = re.sub(r'^```(?:json)?\s*', '', text)
         text = re.sub(r'\s*```$', '', text)
         return json.loads(text)

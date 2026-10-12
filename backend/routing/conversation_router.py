@@ -7,7 +7,7 @@ Intelligent routing based on severity, transcription quality, and symptom type.
 Routes:
 1. EMERGENCY: Red flags detected → Skip to triage
 2. RULE_BASED: Known symptom, low severity, good quality → Predefined questions
-3. AI_POWERED: High severity, unclear data, or unknown symptom → Gemini conversation
+3. AI_POWERED: High severity, unclear data, or unknown symptom → Nemotron conversation
 """
 
 from typing import Dict, List, Optional
@@ -35,7 +35,7 @@ class ConversationMode:
     """Conversation flow modes."""
     EMERGENCY = "emergency"           # Red flag → immediate triage
     RULE_BASED = "rule_based"         # Predefined questions
-    AI_POWERED = "ai_powered"         # Gemini-generated questions
+    AI_POWERED = "ai_powered"         # Nemotron-generated questions
     
 
 # ============================================================================

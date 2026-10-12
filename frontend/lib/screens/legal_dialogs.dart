@@ -136,7 +136,7 @@ void showPrivacyPolicy(BuildContext context) {
             '• Where required by Rwandan law or a lawful order from a competent authority.\n'
             '• With your facility administrator for account management purposes.\n'
             '• With third-party service providers (e.g., cloud infrastructure, email delivery) who are contractually bound to process data only on our instructions and in compliance with applicable law.\n'
-            'AI processing (speech transcription and clinical NLP) is performed using third-party model providers (Google Gemini, OpenAI Whisper). Only de-identified or session-specific data necessary for the task is transmitted.',
+            'AI processing (speech transcription and clinical NLP) is performed using third-party model providers (NVIDIA Nemotron via Nebius Token Factory, OpenAI Whisper). Only de-identified or session-specific data necessary for the task is transmitted.',
       ),
       _LegalSection(
         heading: '7. Your Rights',
